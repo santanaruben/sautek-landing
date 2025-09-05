@@ -19,8 +19,8 @@ export function SectorsSection() {
       description:
         "Focused on developing solutions that optimize mineral extraction processes with advanced monitoring and control systems.",
       features: ["Extraction optimization", "Process monitoring", "Equipment reliability"],
-      image: "/images/industrial-plant.jpg",
-      imageAlt: "Industrial mining facility",
+      image: "/images/mining.jpg",
+      imageAlt: "Industrial mining",
     },
     {
       icon: Sun,
@@ -37,7 +37,7 @@ export function SectorsSection() {
       description:
         "We focus on creating solutions for the exploitation, transportation, and transformation of raw materials in steel production.",
       features: ["Raw material handling", "Transportation systems", "Process transformation"],
-      image: "/images/global-logistics.jpg",
+      image: "/images/steel.jpg",
       imageAlt: "Industrial warehouse and logistics",
     },
     {
@@ -46,7 +46,7 @@ export function SectorsSection() {
       description:
         "We focus on generating solutions adapted to the construction sector, aligned with new market trends and technologies.",
       features: ["Construction solutions", "Market trends", "Infrastructure development"],
-      image: "/images/solar-installation.jpg",
+      image: "/images/infra.jpg",
       imageAlt: "Infrastructure development with renewable energy",
     },
     {

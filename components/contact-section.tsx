@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Mail, Phone, Globe, Send, Loader2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Mail, Phone, Globe, Send, Loader2, AlertTriangle } from "lucide-react"
 import Image from "next/image"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -15,10 +16,10 @@ import { useState } from "react"
 
 // Esquema de validación con Zod
 const contactFormSchema = z.object({
-  fullName: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
-  email: z.string().email("Por favor ingresa un email válido"),
-  subject: z.string().min(5, "El asunto debe tener al menos 5 caracteres"),
-  message: z.string().min(10, "El mensaje debe tener al menos 10 caracteres"),
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().min(1, "Email is required").email("Please enter a valid email"),
+  subject: z.string().min(1, "Subject is required"),
+  message: z.string().min(1, "Message is required"),
 })
 
 type ContactFormData = z.infer<typeof contactFormSchema>
@@ -26,16 +27,70 @@ type ContactFormData = z.infer<typeof contactFormSchema>
 export function ContactSection() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
+  // Verificar si EmailJS está configurado
+  const isEmailJSConfigured = !!(
+    process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID &&
+    process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID &&
+    process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY
+  )
+  
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setError,
+    clearErrors,
   } = useForm<ContactFormData>({
-    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      subject: "",
+      message: "",
+    },
   })
 
   const onSubmit = async (data: ContactFormData) => {
+    // Validación manual
+    clearErrors()
+    let hasErrors = false
+    
+    if (!data.fullName || data.fullName.trim().length < 2) {
+      setError("fullName", { 
+        type: "manual", 
+        message: data.fullName ? "Name must be at least 2 characters" : "Full name is required" 
+      })
+      hasErrors = true
+    }
+    
+    if (!data.email || data.email.trim().length === 0) {
+      setError("email", { type: "manual", message: "Email is required" })
+      hasErrors = true
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      setError("email", { type: "manual", message: "Please enter a valid email" })
+      hasErrors = true
+    }
+    
+    if (!data.subject || data.subject.trim().length < 5) {
+      setError("subject", { 
+        type: "manual", 
+        message: data.subject ? "Subject must be at least 5 characters" : "Subject is required" 
+      })
+      hasErrors = true
+    }
+    
+    if (!data.message || data.message.trim().length < 10) {
+      setError("message", { 
+        type: "manual", 
+        message: data.message ? "Message must be at least 10 characters" : "Message is required" 
+      })
+      hasErrors = true
+    }
+    
+    if (hasErrors) {
+      return
+    }
+    
     setIsSubmitting(true)
     
     try {
@@ -45,7 +100,7 @@ export function ContactSection() {
       const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY
       
       if (!serviceId || !templateId || !publicKey) {
-        throw new Error("Configuración de EmailJS incompleta. Verifica las variables de entorno.")
+        throw new Error("EmailJS configuration is missing. Please set up your EmailJS credentials in the .env.local file.")
       }
 
       // Parámetros del template
@@ -59,20 +114,24 @@ export function ContactSection() {
       // Enviar email
       await emailjs.send(serviceId, templateId, templateParams, publicKey)
       
-      toast.success("¡Mensaje enviado exitosamente!", {
-        description: "Nos pondremos en contacto contigo pronto.",
+      toast.success("Message sent successfully!", {
+        description: "We will get back to you soon.",
       })
       
       reset() // Limpiar el formulario
       
     } catch (error) {
-      console.error("Error al enviar el mensaje:", error)
-      toast.error("Error al enviar el mensaje", {
-        description: "Por favor intenta nuevamente o contacta directamente por teléfono.",
+      console.error("Error sending message:", error)
+      toast.error("Error sending message", {
+        description: "Please try again or contact us directly by phone.",
       })
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const onError = (errors: any) => {
+    // Handle form validation errors if needed
   }
   return (
     <section id="contact" className="py-20 bg-muted">
@@ -126,18 +185,27 @@ export function ContactSection() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Envíanos un Mensaje</CardTitle>
+              <CardTitle className="text-2xl">Send us a Message</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {!isEmailJSConfigured && (
+                <Alert className="mb-6 border-orange-200 bg-orange-50">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-800">
+                    <strong>Email service not configured.</strong> To enable the contact form, please set up your EmailJS credentials in the .env.local file. 
+                    For now, you can contact us directly via email or phone.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
                 <div>
                   <label htmlFor="fullName" className="block text-sm font-medium mb-2">
-                    Nombre Completo *
+                    Full Name *
                   </label>
                   <Input 
                     id="fullName" 
-                    placeholder="Juan Pérez" 
-                    {...register("fullName")}
+                    placeholder="John Doe" 
+                    {...register("fullName", { required: true })}
                     className={errors.fullName ? "border-red-500" : ""}
                   />
                   {errors.fullName && (
@@ -152,8 +220,8 @@ export function ContactSection() {
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="juan@ejemplo.com" 
-                    {...register("email")}
+                    placeholder="john@example.com" 
+                    {...register("email", { required: true })}
                     className={errors.email ? "border-red-500" : ""}
                   />
                   {errors.email && (
@@ -163,12 +231,12 @@ export function ContactSection() {
 
                 <div>
                   <label htmlFor="subject" className="block text-sm font-medium mb-2">
-                    Asunto *
+                    Subject *
                   </label>
                   <Input 
                     id="subject" 
-                    placeholder="Consulta de proyecto, solicitud de equipos, etc." 
-                    {...register("subject")}
+                    placeholder="Project inquiry, equipment request, etc." 
+                    {...register("subject", { required: true })}
                     className={errors.subject ? "border-red-500" : ""}
                   />
                   {errors.subject && (
@@ -178,13 +246,13 @@ export function ContactSection() {
 
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium mb-2">
-                    Mensaje *
+                    Message *
                   </label>
                   <Textarea 
                     id="message" 
-                    placeholder="Cuéntanos sobre los requisitos de tu proyecto..." 
+                    placeholder="Tell us about your project requirements..." 
                     rows={4} 
-                    {...register("message")}
+                    {...register("message", { required: true })}
                     className={errors.message ? "border-red-500" : ""}
                   />
                   {errors.message && (
@@ -195,17 +263,17 @@ export function ContactSection() {
                 <Button 
                   type="submit" 
                   className="w-full bg-primary hover:bg-primary/90" 
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isEmailJSConfigured}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
+                      Sending...
                     </>
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Enviar Mensaje
+                      Send Message
                     </>
                   )}
                 </Button>
